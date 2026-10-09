@@ -1,0 +1,18 @@
+{
+  "etiqueta": "ppo_aversion",
+  "algo": "ppo",
+  "recompensa": "aversion",
+  "semilla": 4,
+  "entrenamiento_retorno_pct": 41.7337704262124,
+  "entrenamiento_max_caida_pct": 9.096441740876148,
+  "entrenamiento_sharpe": 0.79835543650379,
+  "entrenamiento_exposicion_media": 0.06788592684438934,
+  "entrenamiento_rotacion": 22.0,
+  "entrenamiento_operaciones": 25,
+  "validacion_retorno_pct": 3.8777232942291295,
+  "validacion_max_caida_pct": 0.7546617388244248,
+  "validacion_sharpe": 1.3875332954469675,
+  "validacion_exposicion_media": 0.017142857142857144,
+  "validacion_rotacion": 2.0,
+  "validacion_operaciones": 2
+}

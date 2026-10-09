@@ -1,0 +1,18 @@
+{
+  "etiqueta": "ppo_diferencial",
+  "algo": "ppo",
+  "recompensa": "diferencial",
+  "semilla": 0,
+  "entrenamiento_retorno_pct": 108.85973024677268,
+  "entrenamiento_max_caida_pct": 27.59996223430382,
+  "entrenamiento_sharpe": 0.6692915765694456,
+  "entrenamiento_exposicion_media": 0.6494110353378797,
+  "entrenamiento_rotacion": 121.0,
+  "entrenamiento_operaciones": 236,
+  "validacion_retorno_pct": 11.89960618269652,
+  "validacion_max_caida_pct": 10.221233760532101,
+  "validacion_sharpe": 0.5992156869381065,
+  "validacion_exposicion_media": 0.6357142857142857,
+  "validacion_rotacion": 29.0,
+  "validacion_operaciones": 58
+}

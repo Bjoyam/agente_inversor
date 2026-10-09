@@ -1,0 +1,18 @@
+{
+  "etiqueta": "dqn_diferencial",
+  "algo": "dqn",
+  "recompensa": "diferencial",
+  "semilla": 2,
+  "entrenamiento_retorno_pct": 498.34755019917355,
+  "entrenamiento_max_caida_pct": 24.78702396837701,
+  "entrenamiento_sharpe": 1.4030172295069785,
+  "entrenamiento_exposicion_media": 0.6946683199008059,
+  "entrenamiento_rotacion": 287.0,
+  "entrenamiento_operaciones": 383,
+  "validacion_retorno_pct": 0.6574049342754629,
+  "validacion_max_caida_pct": 17.816131501613697,
+  "validacion_sharpe": 0.029805560758375663,
+  "validacion_exposicion_media": 0.7642857142857142,
+  "validacion_rotacion": 59.0,
+  "validacion_operaciones": 78
+}

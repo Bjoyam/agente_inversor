@@ -1,0 +1,22 @@
+# PPO con recompensa diferencial y los hiperparametros que encontro Optuna
+# (agente-inversor tune --config configs/ppo.yaml --recompensa diferencial).
+#   agente-inversor entrenar --config configs/ppo_tuned.yaml --sufijo _tuned
+
+experimento: agente_inversor
+algo: ppo
+pasos: 100_000
+semillas: [0, 1, 2, 3, 4]
+
+entorno:
+  ventana: 20         # dias de historia para los indicadores
+  costo: 0.001        # 0,1 % del capital que cambia de manos
+  episodio: 252       # un ano bursatil por episodio de entrenamiento
+  recompensa: diferencial
+
+hiper:
+  learning_rate: 1.485e-4
+  n_steps: 1024
+  batch_size: 64
+  n_epochs: 5
+  gamma: 0.95
+  ent_coef: 0.0137

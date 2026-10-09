@@ -1,0 +1,18 @@
+{
+  "etiqueta": "dqn_aversion",
+  "algo": "dqn",
+  "recompensa": "aversion",
+  "semilla": 3,
+  "entrenamiento_retorno_pct": 84.57626586266997,
+  "entrenamiento_max_caida_pct": 4.944441353103535,
+  "entrenamiento_sharpe": 1.5418240955162195,
+  "entrenamiento_exposicion_media": 0.08679479231246125,
+  "entrenamiento_rotacion": 103.0,
+  "entrenamiento_operaciones": 155,
+  "validacion_retorno_pct": 9.738526751201482,
+  "validacion_max_caida_pct": 0.8129426261644701,
+  "validacion_sharpe": 1.94260964032215,
+  "validacion_exposicion_media": 0.045714285714285714,
+  "validacion_rotacion": 13.0,
+  "validacion_operaciones": 23
+}

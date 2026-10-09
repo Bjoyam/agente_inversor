@@ -1,0 +1,18 @@
+{
+  "etiqueta": "dqn_log",
+  "algo": "dqn",
+  "recompensa": "log",
+  "semilla": 2,
+  "entrenamiento_retorno_pct": 670.1851332649884,
+  "entrenamiento_max_caida_pct": 12.288755914836901,
+  "entrenamiento_sharpe": 1.9947165855072657,
+  "entrenamiento_exposicion_media": 0.4885306881587105,
+  "entrenamiento_rotacion": 296.0,
+  "entrenamiento_operaciones": 414,
+  "validacion_retorno_pct": -9.801376780128535,
+  "validacion_max_caida_pct": 14.897391365496315,
+  "validacion_sharpe": -0.7499896871384103,
+  "validacion_exposicion_media": 0.4042857142857143,
+  "validacion_rotacion": 65.0,
+  "validacion_operaciones": 85
+}

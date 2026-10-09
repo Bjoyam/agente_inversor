@@ -1,0 +1,18 @@
+{
+  "etiqueta": "ppo_log",
+  "algo": "ppo",
+  "recompensa": "log",
+  "semilla": 0,
+  "entrenamiento_retorno_pct": 175.14557484101633,
+  "entrenamiento_max_caida_pct": 21.864021905384178,
+  "entrenamiento_sharpe": 0.8089662758790014,
+  "entrenamiento_exposicion_media": 0.694048357098574,
+  "entrenamiento_rotacion": 299.5,
+  "entrenamiento_operaciones": 448,
+  "validacion_retorno_pct": 2.5381298230859883,
+  "validacion_max_caida_pct": 14.903670143788993,
+  "validacion_sharpe": 0.11934296038179351,
+  "validacion_exposicion_media": 0.7357142857142858,
+  "validacion_rotacion": 65.0,
+  "validacion_operaciones": 98
+}
