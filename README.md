@@ -6,7 +6,7 @@
 Proyecto final de Simulación y Aprendizaje por Refuerzo (EFMIA-SAPR20265), Maestría en
 Inteligencia Artificial, Universidad de La Sabana.
 
-Autor: Gabriel Alonso Lizano Alvarado (gabriellial@unisabana.edu.co). Docente: Emilio Muñoz Pérez.
+Autores: Leonar Socarrás Molina (leonarsomo@unisabana.edu.co), John Jairo Serrano Cifuentes (johnseci@unisabana.edu.co), Brezhnev Joya Miranda (brezhnevjomi@unisabana.edu.co), Gabriel Alonso Lizano Alvarado (gabriellial@unisabana.edu.co), Bryan Johann Aranzazu Medina (bryanarme@unisabana.edu.co). Docente: Emilio Muñoz Pérez.
 
 ## Resumen
 
@@ -241,7 +241,7 @@ indicadores que no sean solo del precio.
 
 ## 7. Reflexión
 
-*(Pendiente: reflexión personal del autor sobre el proceso.)*
+*(Pendiente: reflexión del equipo sobre el proceso.)*
 
 ## 8. Estructura
 
@@ -267,7 +267,7 @@ tests/                   # pruebas del entorno y de las métricas
 
 El código, los experimentos y la redacción de este informe se desarrollaron con la
 asistencia de Claude (Anthropic). Las decisiones de formulación, el protocolo de evaluación
-y la interpretación de los resultados fueron revisados por el autor.
+y la interpretación de los resultados fueron revisados por el equipo.
 
 ## 10. Referencias
 
