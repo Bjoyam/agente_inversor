@@ -3,7 +3,7 @@
 Contenido:
   - entrenar() : entrena una semilla, la evalua en validacion y la registra en MLflow
   - tune()     : busqueda con Optuna, puntuada en validacion
-  - prueba()   : evaluacion en el tramo de prueba, junto a los baselines
+  - prueba()   : evaluacion en un tramo no visto (prueba o prueba_extendida), con baselines
 
 El tramo de prueba solo lo toca `prueba()`. La seleccion de recompensa, algoritmo
 e hiperparametros se hace con el tramo de validacion.
@@ -100,23 +100,30 @@ def tune(cfg: config.Config, n_trials: int | None = None) -> optuna.Study:
     return estudio
 
 
-def prueba(cfg: config.Config) -> dict:
-    """Evalua los modelos guardados de cfg en el tramo de prueba, con los baselines."""
+def prueba(cfg: config.Config, tramo: str = "prueba") -> dict:
+    """Evalua los modelos guardados de cfg en un tramo no visto, con los baselines.
+
+    `prueba` es el tramo final de la particion; `prueba_extendida` es la segunda
+    prueba, 2018-08-30 a 2025-12-31, con datos de Yahoo Finance. Ninguno de los dos
+    se usa para elegir nada: los modelos son los mismos y no se reentrenan.
+    """
     agente, curvas = [], {}
     for semilla in cfg.semillas:
         modelo = registry.load(cfg.algo, cfg.etiqueta, semilla)
-        sim = evaluacion.simular(_env(cfg, "prueba"), evaluacion.politica_modelo(modelo))
+        sim = evaluacion.simular(_env(cfg, tramo), evaluacion.politica_modelo(modelo))
         agente.append({"semilla": semilla, **evaluacion.metricas(sim)})
         curvas[f"semilla_{semilla}"] = sim["capital"].tolist()
+        curvas[f"exposicion_semilla_{semilla}"] = sim["exposicion"].tolist()
 
-    env = _env(cfg, "prueba")
+    env = _env(cfg, tramo)
     curvas["comprar_y_mantener"] = evaluacion.simular(env, lambda _o: 2)["capital"].tolist()
     res = {
         "etiqueta": cfg.etiqueta,
+        "tramo": tramo,
         "agente": agente,
-        "baselines": evaluacion.baselines("prueba", cfg.entorno),
+        "baselines": evaluacion.baselines(tramo, cfg.entorno),
         "curvas": curvas,
     }
     RESULTADOS.mkdir(exist_ok=True)
-    (RESULTADOS / "prueba.json").write_text(json.dumps(res, indent=2))
+    (RESULTADOS / f"{tramo}.json").write_text(json.dumps(res, indent=2))
     return res

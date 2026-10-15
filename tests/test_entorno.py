@@ -98,3 +98,15 @@ def test_los_tramos_no_comparten_retornos():
 def test_maxima_caida():
     sim = {"capital": np.array([1.0, 1.2, 0.9, 1.1]), "exposicion": np.array([1.0, 1.0, 1.0])}
     assert evaluacion.metricas(sim)["max_caida_pct"] == pytest.approx(25.0)
+
+
+def test_prueba_extendida_continua_la_serie_sin_compartir_retornos():
+    original = datos.cargar()
+    extendida, t = datos.tramo("prueba_extendida", 20)
+    # primera decision el ultimo dia original; primer retorno cobrado, el dia siguiente
+    assert extendida.index[t.inicio] == original.index[-1]
+    assert extendida.index[t.inicio + 1] > original.index[-1]
+    # en los dias comunes las dos fuentes dan los mismos retornos
+    comunes = original.index.intersection(extendida.index)
+    cociente = original[comunes] / extendida[comunes]
+    assert cociente.max() / cociente.min() == pytest.approx(1.0, abs=1e-6)

@@ -23,6 +23,12 @@ de las cinco semillas lo hacen y tres no. La máxima caída mediana fue 13,8 %, 
 de comprar y mantener. La sección 6 discute por qué creemos que ese es el resultado
 esperable y qué limita lo que se puede concluir.
 
+Como segunda prueba fuera de muestra evaluamos los mismos cinco modelos, sin reentrenar,
+de agosto de 2018 a diciembre de 2025 con datos de Yahoo Finance, un periodo que incluye
+las caídas de 2020 y 2022. La mediana fue +243,9 % contra +398,2 % de comprar y mantener:
+el agente sigue sin superarlo en retorno, aunque las semillas que más operan pierden
+bastante menos en las caídas (sección 5, "Segunda prueba").
+
 El proyecto parte de la base sugerida en clase,
 [`rl_games_sb`](https://github.com/emiliomunozai/rl_games_sb): misma organización (CLI,
 configuraciones en YAML, registro de algoritmos), seguimiento con MLflow y búsqueda de
@@ -33,7 +39,7 @@ protocolo de evaluación y los baselines.
 
 ```bash
 uv sync
-uv run pytest -q                      # 10 pruebas del entorno y las métricas
+uv run pytest -q                      # 11 pruebas del entorno, los datos y las métricas
 
 uv run agente-inversor inspeccionar   # datos, tramos, estado, acciones
 uv run agente-inversor baselines --tramo validacion
@@ -44,7 +50,12 @@ uv run agente-inversor entrenar --config configs/ppo_tuned.yaml --sufijo _tuned
 uv run agente-inversor resumen        # tabla de validación
 
 uv run agente-inversor prueba  --config configs/ppo.yaml --recompensa diferencial
+uv run agente-inversor prueba  --config configs/ppo.yaml --recompensa diferencial \
+                               --tramo prueba_extendida   # segunda prueba, 2018 a 2025
 uv run python scripts/graficar.py
+
+# Solo si se quiere volver a bajar la serie de Yahoo Finance (el CSV ya está en datos/)
+uv run --no-project --with yfinance python scripts/descargar_datos.py
 
 uv run mlflow ui                      # http://127.0.0.1:5000, experimento agente_inversor
 ```
@@ -57,7 +68,11 @@ números pueden variar levemente por diferencias de versión de PyTorch.
 
 **Datos.** Cierre diario de GOOGL del 22 de mayo de 2009 al 29 de agosto de 2018 (2.335
 días hábiles), el conjunto que trae `gym-anytrading`, la librería de entornos de inversión
-incluida en la base del curso.
+incluida en la base del curso. Para la segunda prueba (sección 5) usamos el cierre ajustado de
+GOOGL de Yahoo Finance hasta el 31 de diciembre de 2025, guardado en
+`datos/GOOGL_yahoo_2018-07_2025-12.csv`. En los 42 días que comparten, las dos fuentes
+difieren en un factor constante de 20,19 (la división de acciones de 2022, que Yahoo ya
+ajusta), así que los retornos son idénticos y la serie continúa sin salto.
 
 **Estado**, siete números, todos calculados con los últimos 20 días:
 
@@ -107,8 +122,10 @@ porque invertir no "termina" ahí.
 | Entrenamiento | 2009-06-23 a 2015-11-16 | 1.613 | +267,7 % |
 | Validación | 2015-11-17 a 2017-04-07 | 350 | +12,1 % |
 | Prueba | 2017-04-10 a 2018-08-29 | 351 | +50,0 % |
+| Segunda prueba (Yahoo Finance) | 2018-08-30 a 2025-12-31 | 1.844 | +398,2 % |
 
-Ningún retorno se cobra en dos tramos (`test_los_tramos_no_comparten_retornos`).
+Ningún retorno se cobra en dos tramos (`test_los_tramos_no_comparten_retornos` y
+`test_prueba_extendida_continua_la_serie_sin_compartir_retornos`).
 
 ## 3. Diseño de la recompensa
 
@@ -205,6 +222,60 @@ aleatorio (promedio de 100 semillas).
   agente y comprar y mantener. Con una sola semilla habríamos podido reportar tanto "le
   gana por 12 puntos" como "pierde por 27".
 
+### Segunda prueba: agosto de 2018 a diciembre de 2025
+
+El tramo de prueba original es corto (351 días) y casi todo alcista, que es la primera
+limitación de la sección 6. Para ponerla a prueba evaluamos los mismos cinco modelos, sin
+reentrenar ni cambiar nada, en los siete años y cuatro meses siguientes, que incluyen la
+caída de febrero y marzo de 2020 (−30,9 % para comprar y mantener) y el mercado bajista de
+noviembre de 2021 a noviembre de 2022 (−44,3 %). Este tramo no se usó para elegir nada.
+
+| | Retorno | Máx. caída | Sharpe | Exposición media | Operaciones |
+|---|---|---|---|---|---|
+| Agente, semilla 0 | +243,9 % | 29,4 % | 0,75 | 0,63 | 289 |
+| Agente, semilla 1 | +240,7 % | 32,5 % | 0,73 | 0,70 | 295 |
+| Agente, semilla 2 | +168,4 % | 38,3 % | 0,47 | 0,84 | 342 |
+| Agente, semilla 3 | +497,1 % | 42,9 % | 0,79 | 0,99 | 16 |
+| Agente, semilla 4 | +430,1 % | 42,8 % | 0,73 | 1,00 | 9 |
+| **Agente, mediana** | **+243,9 %** | **38,3 %** | **0,73** | | |
+| Comprar y mantener | +398,2 % | 44,3 % | 0,70 | 1,00 | 1 |
+| 50 % fijo | +144,3 % | 24,1 % | 0,78 | 0,50 | 1 |
+| En efectivo | 0,0 % | 0,0 % | | 0,00 | 0 |
+| Agente aleatorio | +10,0 % ± 33,6 | 43,5 % | 0,03 | 0,50 | 1.229 |
+
+![Curva de capital en la segunda prueba, escala logarítmica](resultados/prueba_extendida.png)
+
+Retorno en las dos caídas, para cada semilla:
+
+| | 19 feb a 23 mar de 2020 | 18 nov de 2021 a 3 nov de 2022 |
+|---|---|---|
+| Semilla 0 | −26,5 % | −29,4 % |
+| Semilla 1 | −21,5 % | −31,1 % |
+| Semilla 2 | −37,1 % | −38,0 % |
+| Semilla 3 | −30,9 % | −42,9 % |
+| Semilla 4 | −30,9 % | −42,8 % |
+| Comprar y mantener | −30,9 % | −44,3 % |
+
+- **El resultado de la primera prueba se sostiene.** La mediana del agente (+243,9 %)
+  queda muy por debajo de comprar y mantener (+398,2 %), y de nuevo supera con holgura al
+  agente aleatorio en las cinco semillas.
+- **Las semillas se dividen en dos comportamientos.** Las semillas 3 y 4 se quedan casi
+  siempre invertidas (16 y 9 operaciones en siete años) y terminan por encima de comprar y
+  mantener, con casi la misma caída. Las semillas 0, 1 y 2 operan casi 300 veces y reducen su
+  exposición media a entre 0,63 y 0,84.
+- **Las semillas activas sí protegen en el mercado bajista de 2022**: pierden entre 29 % y
+  38 % frente a 44 % de comprar y mantener. Pero no recuperan lo suficiente en las subidas:
+  en 2020 la semilla 0 gana 8,9 % y comprar y mantener 30,9 %. Al final, su Sharpe (0,73 a
+  0,75 para las semillas 0 y 1) es apenas mejor que el de comprar y mantener (0,70) y peor
+  que el de tener siempre el 50 % (0,78), que no necesita ningún agente.
+- **La semilla 2 es la advertencia.** Reduce exposición en el momento equivocado de 2020 y
+  pierde más que comprar y mantener (−37,1 % contra −30,9 %); es la peor en retorno y en
+  Sharpe.
+- **La ventaja de las semillas 3 y 4 no es habilidad demostrable.** Con tan pocas
+  operaciones, los 30 a 100 puntos que sacan sobre comprar y mantener salen de unas pocas
+  salidas afortunadas: la semilla 3 le saca 10 puntos a comprar y mantener en 2019 y 7 en
+  2020, y el resto de los años queda a unos 3 puntos o menos de él.
+
 ## 6. Discusión
 
 **El resultado es el esperable.** En un tramo en que la acción sube 50 %, cada día fuera
@@ -214,8 +285,10 @@ cual es compatible con haber evitado uno o dos días malos por azar.
 
 **Limitaciones.**
 
-- **Un solo activo y un solo periodo.** GOOGL de 2009 a 2018 es casi todo mercado alcista.
-  El agente nunca vio una caída prolongada, así que no sabemos cómo se comportaría en una.
+- **Un solo activo.** GOOGL de 2009 a 2018 es casi todo mercado alcista, y el agente se
+  entrenó solo ahí. La segunda prueba (2018 a 2025) muestra que en las caídas de 2020 y
+  2022 algunas semillas reducen la pérdida, pero ninguna aprendió a salir y volver a entrar
+  a tiempo; para eso tendría que haber visto caídas durante el entrenamiento.
 - **No estacionariedad.** Los tramos son distintos entre sí (+12 % en validación, +50 % en
   prueba, en periodos de igual duración). La configuración elegida en validación no tiene
   por qué ser la mejor en prueba, y lo que el agente aprendió de 2009 a 2015 puede no
@@ -235,9 +308,9 @@ cual es compatible con haber evitado uno o dos días malos por azar.
 sutil: la política que no hace nada (100 % invertido siempre) recibe recompensa 0, que es
 un óptimo local cómodo, y varias semillas terminan ahí.
 
-**Qué haríamos después.** Entrenar con varios activos para que el agente vea más regímenes;
-evaluar con ventanas móviles (*walk-forward*) en lugar de un solo corte; y agregar
-indicadores que no sean solo del precio.
+**Qué haríamos después.** Entrenar con varios activos, o con periodos que incluyan caídas,
+para que el agente vea más regímenes; evaluar con ventanas móviles (*walk-forward*) en
+lugar de un solo corte; y agregar indicadores que no sean solo del precio.
 
 ## 7. Reflexión
 
@@ -247,11 +320,13 @@ indicadores que no sean solo del precio.
 
 ```
 configs/                 # un YAML por algoritmo: entorno, hiperparámetros, búsqueda
+datos/                   # GOOGL de Yahoo Finance, 2018 a 2025, para la segunda prueba
 scripts/comparar.sh      # la rejilla completa de corridas
+scripts/descargar_datos.py  # baja el CSV de datos/ (yfinance)
 scripts/graficar.py      # figuras del informe
 src/agente_inversor/
 ├── cli.py               # argumentos y formato de salida
-├── datos.py             # precios y partición cronológica
+├── datos.py             # precios, partición cronológica y segunda prueba
 ├── envs.py              # entorno de inversión y recompensas
 ├── evaluacion.py        # simulación, métricas y baselines
 ├── experiments.py       # entrenamiento, Optuna y evaluación final
@@ -284,6 +359,7 @@ y la interpretación de los resultados fueron revisados por el equipo.
 - Sutton, R. S., & Barto, A. G. (2018). *Reinforcement learning: An introduction* (2.ª ed.).
   MIT Press.
 - Haghpanah, A. (s. f.). *gym-anytrading* [Software]. https://github.com/AminHP/gym-anytrading
+- Aroussi, R. (s. f.). *yfinance* [Software]. https://github.com/ranaroussi/yfinance
 
 ## 11. Licencia
 
