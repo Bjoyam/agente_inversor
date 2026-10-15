@@ -4,6 +4,7 @@
 
   - validacion.png : retorno en validacion de cada semilla, por configuracion
   - prueba.png     : curva de capital del agente y de comprar y mantener en prueba
+  - prueba_extendida.png : lo mismo en la segunda prueba, 2018-08-30 a 2025-12-31
 """
 import json
 from pathlib import Path
@@ -13,6 +14,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib import ticker
 
 from agente_inversor import config, datos, evaluacion
 
@@ -62,7 +64,36 @@ def prueba() -> None:
     fig.savefig(RES / "prueba.png", dpi=150)
 
 
+def prueba_extendida() -> None:
+    res = json.loads((RES / "prueba_extendida.json").read_text())
+    serie, t = datos.tramo("prueba_extendida", config.ENTORNO["ventana"])
+    fechas = serie.index[t.inicio : t.fin]
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    for nombre, curva in res["curvas"].items():
+        if nombre == "comprar_y_mantener":
+            ax.plot(fechas, curva, color="tab:green", lw=2, label="comprar y mantener")
+        elif nombre.startswith("semilla_"):
+            ax.plot(fechas, curva, color="tab:blue", alpha=0.6, label=None)
+    ax.plot([], [], color="tab:blue", label=f"agente {res['etiqueta']} (5 semillas)")
+    for a, b in (("2020-02-19", "2020-03-23"), ("2021-11-18", "2022-11-03")):
+        ax.axvspan(pd.Timestamp(a), pd.Timestamp(b), color="gray", alpha=0.15, lw=0)
+    ax.set_yscale("log")
+    ax.yaxis.set_major_locator(ticker.FixedLocator([0.6, 0.8, 1, 1.5, 2, 3, 4, 6]))
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+    ax.yaxis.set_minor_locator(ticker.NullLocator())
+    ax.axhline(1.0, color="gray", lw=0.8)
+    ax.set_ylabel("Capital (inicial = 1, escala logaritmica)")
+    ax.set_title("Segunda prueba, 2018 a 2025; en gris, las caidas de 2020 y 2022")
+    ax.legend()
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(RES / "prueba_extendida.png", dpi=150)
+
+
 if __name__ == "__main__":
     validacion()
     if (RES / "prueba.json").exists():
         prueba()
+    if (RES / "prueba_extendida.json").exists():
+        prueba_extendida()

@@ -4,7 +4,8 @@ Contenido:
   - EXPOSICIONES     : fraccion del capital invertida por cada accion
   - RECOMPENSAS      : las funciones de recompensa disponibles
   - EntornoInversion : el entorno
-  - make()           : construye el entorno de un tramo (entrenamiento, validacion, prueba)
+  - make()           : construye el entorno de un tramo (entrenamiento, validacion, prueba,
+                       prueba_extendida)
 
 Formulacion:
   Estado   : 6 indicadores del precio calculados con los ultimos `ventana` dias,
@@ -132,10 +133,9 @@ def make(
     episodio: int | None = None,
 ) -> Monitor:
     """El entorno de un tramo. `episodio` solo tiene sentido en entrenamiento."""
-    precios = datos.cargar().to_numpy()
-    t = datos.particion(len(precios), ventana)[tramo]
+    serie, t = datos.tramo(tramo, ventana)
     env = EntornoInversion(
-        precios, t.inicio, t.fin, ventana=ventana, costo=costo,
+        serie.to_numpy(), t.inicio, t.fin, ventana=ventana, costo=costo,
         recompensa=recompensa, episodio=episodio,
     )
     return Monitor(env)

@@ -98,9 +98,9 @@ def cmd_baselines(args: argparse.Namespace) -> None:
 
 
 def cmd_prueba(args: argparse.Namespace) -> None:
-    res = experiments.prueba(_cfg(args))
+    res = experiments.prueba(_cfg(args), tramo=args.tramo)
     agente = pd.DataFrame(res["agente"]).set_index("semilla")[COLUMNAS]
-    print(f"Agente {res['etiqueta']} en el tramo de prueba:\n")
+    print(f"Agente {res['etiqueta']} en el tramo {args.tramo}:\n")
     print(agente.round(2).to_string())
     print(f"\n  mediana: {agente['retorno_pct'].median():+.2f} %\n\nBaselines:\n")
     print(pd.DataFrame(res["baselines"]).T[COLUMNAS].round(2).to_string())
@@ -139,8 +139,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tramo", choices=datos.TRAMOS[:2], default="validacion")
     p.set_defaults(func=cmd_baselines)
 
-    p = sub.add_parser("prueba", help="Evaluacion final en el tramo de prueba")
+    p = sub.add_parser("prueba", help="Evaluacion final en un tramo no visto")
     add_cfg(p)
+    p.add_argument(
+        "--tramo", choices=("prueba", "prueba_extendida"), default="prueba",
+        help="prueba_extendida: 2018-08-30 a 2025-12-31 con datos de Yahoo Finance",
+    )
     p.set_defaults(func=cmd_prueba)
 
     return parser
