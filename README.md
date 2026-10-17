@@ -357,7 +357,50 @@ lugar de un solo corte; y agregar indicadores que no sean solo del precio.
 
 ## 7. Reflexión
 
-La reflexión es individual: cada integrante la presenta en su propio informe.
+La reflexión es individual. Cada integrante responde las cinco preguntas del enunciado en su
+propia subsección.
+
+### Bryan Johann Aranzazu Medina
+
+**¿Cuál fue el resultado que más me sorprendió?** Que toda la ventaja de la mejor semilla en
+el tramo de prueba se pudiera explicar con una sola multiplicación. Ver una semilla con
++57,7 % frente a +50,0 % invita a pensar que el agente aprendió a esquivar caídas; al revisar
+día a día sus posiciones, resultó que estuvo fuera del mercado un único día y que ese día cayó
+5,2 % (sección 5). Fue la demostración más concreta de que un número agregado, sin mirar el
+comportamiento que lo produce, puede contar una historia falsa.
+
+**¿Qué decisión metodológica tuvo mayor impacto en el agente?** La elección de la recompensa.
+Con el mismo algoritmo, la misma red y los mismos datos, cambiar la recompensa produjo tres
+agentes irreconocibles entre sí: uno que opera en exceso (`log` con DQN), uno que no invierte
+(`aversion`) y uno que se queda cerca del mercado (`diferencial`). Después de ella, la decisión
+con más peso fue evaluar cinco semillas en lugar de una: sin ella habríamos reportado un
+resultado u otro según la suerte de la inicialización.
+
+**¿Qué cambiaría si tuviera que repetir el experimento?** Haría la evaluación con ventanas
+móviles (*walk-forward*) desde el principio y reservaría un tramo de validación más largo,
+porque gran parte de la incertidumbre del resultado viene de haber tomado todas las decisiones
+con 350 días. También mediría los costos desde la primera versión del entorno: los
+incorporamos como métrica explícita al final, y fue al hacerlo cuando se vio que DQN con
+recompensa `log` perdía por operar más que por decidir mal (8,5 % de costos frente a −4,1 %
+de retorno en validación).
+
+**¿Qué comportamiento del agente no logré explicar completamente?** Por qué, con la misma
+configuración, las semillas 0 y 1 terminan operando entre 50 % y 100 % aunque en el propio
+tramo de entrenamiento eso les rinde menos que no hacer nada: +109 % y +143 % frente a
++268 % de comprar y mantener. Con la recompensa `diferencial`, quedarse siempre invertido vale
+0, así que existía una política trivial mejor que no encontraron, mientras que las semillas 3
+y 4 sí convergieron a ella. Sospecho que influye entrenar con ventanas de un año elegidas al
+azar, en algunas de las cuales reducir exposición sí paga, y que la exploración por entropía
+no alcanza para salir de ese comportamiento, pero no lo verifiqué.
+
+**¿Cuál fue la principal diferencia entre lo aprendido en el curso y su aplicación a este
+problema?** En los entornos del curso, como CartPole o Pong, el entorno es estacionario, la
+recompensa está bien definida y el desempeño en entrenamiento es buena señal del desempeño
+real. Aquí ninguna de las tres cosas se cumple: el mercado cambia de régimen, la recompensa
+hay que diseñarla y el agente que mejor rinde en entrenamiento (DQN con `log`, +670 %) es el
+peor fuera de él. Desde mi trabajo en arquitectura de datos, la regla de no mirar el futuro me
+resultó familiar como un problema de fuga de datos y de linaje: lo importante no fue el
+algoritmo, sino garantizar con pruebas qué información estaba disponible en cada momento.
 
 ## 8. Estructura
 
