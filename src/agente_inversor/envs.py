@@ -110,6 +110,7 @@ class EntornoInversion(gym.Env):
     def step(self, action):
         nueva = float(EXPOSICIONES[int(action)])
         costo = abs(nueva - self.exposicion) * self.costo
+        costo_pagado = self.capital * costo  # en unidades de capital (inicial = 1)
         self.exposicion = nueva
 
         self.t += 1
@@ -120,7 +121,7 @@ class EntornoInversion(gym.Env):
         recompensa = ESCALA * self._recompensa(float(np.log(factor)), float(r_activo))
         # El final de los datos no es un estado terminal del problema: es un corte.
         truncado = self.t >= self.t_fin
-        info = {"capital": self.capital, "exposicion": nueva}
+        info = {"capital": self.capital, "exposicion": nueva, "costo": costo_pagado}
         return self._obs(), recompensa, False, truncado, info
 
 

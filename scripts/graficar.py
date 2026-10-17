@@ -5,6 +5,7 @@
   - validacion.png : retorno en validacion de cada semilla, por configuracion
   - prueba.png     : curva de capital del agente y de comprar y mantener en prueba
   - prueba_extendida.png : lo mismo en la segunda prueba, 2018-08-30 a 2025-12-31
+  - posiciones_prueba.png : precio y exposicion diaria de cada semilla en prueba
 """
 import json
 from pathlib import Path
@@ -52,7 +53,7 @@ def prueba() -> None:
     for nombre, curva in res["curvas"].items():
         if nombre == "comprar_y_mantener":
             ax.plot(fechas, curva, color="tab:green", lw=2, label="comprar y mantener")
-        else:
+        elif nombre.startswith("semilla_"):  # las exposicion_semilla_* van en posiciones()
             ax.plot(fechas, curva, color="tab:blue", alpha=0.6, label=None)
     ax.plot([], [], color="tab:blue", label=f"agente {res['etiqueta']} (5 semillas)")
     ax.axhline(1.0, color="gray", lw=0.8)
@@ -91,9 +92,35 @@ def prueba_extendida() -> None:
     fig.savefig(RES / "prueba_extendida.png", dpi=150)
 
 
+def posiciones() -> None:
+    res = json.loads((RES / "prueba.json").read_text())
+    serie = datos.cargar()
+    t = datos.particion(len(serie), config.ENTORNO["ventana"])["prueba"]
+    fechas = serie.index[t.inicio + 1 : t.fin]  # la exposicion i se cobra el dia i + 1
+    semillas = sorted(k for k in res["curvas"] if k.startswith("exposicion_semilla_"))
+
+    fig, ejes = plt.subplots(
+        len(semillas) + 1, 1, figsize=(9, 8), sharex=True,
+        gridspec_kw={"height_ratios": [1.8] + [1] * len(semillas)},
+    )
+    ejes[0].plot(fechas, serie.iloc[t.inicio + 1 : t.fin], color="black", lw=1)
+    ejes[0].set_ylabel("Precio GOOGL")
+    ejes[0].set_title("Tramo de prueba: exposicion diaria del agente en cada semilla")
+    for ax, clave in zip(ejes[1:], semillas, strict=True):
+        x = res["curvas"][clave]
+        ax.fill_between(fechas, x, step="post", color="tab:blue", alpha=0.5)
+        ax.set_ylim(-0.05, 1.05)
+        ax.set_yticks([0, 0.5, 1])
+        ax.set_ylabel(f"s{clave.rsplit('_', 1)[1]}", rotation=0, labelpad=12)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(RES / "posiciones_prueba.png", dpi=150)
+
+
 if __name__ == "__main__":
     validacion()
     if (RES / "prueba.json").exists():
         prueba()
+        posiciones()
     if (RES / "prueba_extendida.json").exists():
         prueba_extendida()

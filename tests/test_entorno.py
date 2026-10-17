@@ -110,3 +110,14 @@ def test_prueba_extendida_continua_la_serie_sin_compartir_retornos():
     comunes = original.index.intersection(extendida.index)
     cociente = original[comunes] / extendida[comunes]
     assert cociente.max() / cociente.min() == pytest.approx(1.0, abs=1e-6)
+
+
+def test_costos_reportados_coinciden_con_lo_que_pierde_el_capital():
+    """Con precio plano, la suma de costos reportados es exactamente la perdida de capital."""
+    p = np.full(100, 50.0)
+    env = EntornoInversion(p, 20, 100, costo=0.01)
+    acciones = iter([2, 0, 1, 1, 2] + [2] * 100)
+    sim = evaluacion.simular(env, lambda _o: next(acciones))
+    m = evaluacion.metricas(sim)
+    assert m["costos_pct"] == pytest.approx((1 - sim["capital"][-1]) * 100)
+    assert m["costos_monto"] == pytest.approx(m["costos_pct"] / 100 * evaluacion.CAPITAL_INICIAL)

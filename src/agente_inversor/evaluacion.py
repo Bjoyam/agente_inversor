@@ -2,7 +2,7 @@
 
 Contenido:
   - simular()   : una pasada completa de una politica sobre un entorno
-  - metricas()  : retorno acumulado, maxima caida, Sharpe, exposicion y rotacion
+  - metricas()  : retorno acumulado, maxima caida, costos, Sharpe, exposicion y rotacion
   - baselines() : comprar y mantener, 50 % fijo, en efectivo y agente aleatorio
 
 Las metricas se calculan siempre sobre el capital real (neto de costos), nunca
@@ -16,20 +16,27 @@ import numpy as np
 
 from agente_inversor import envs
 
+CAPITAL_INICIAL = 100_000  # $100.000 del enunciado; solo se usa para expresar los costos
+
 Politica = Callable[[np.ndarray], int]
 
 
 def simular(env, politica: Politica) -> dict[str, np.ndarray]:
-    """Capital (empieza en 1.0) y exposicion elegida en cada dia."""
+    """Capital (empieza en 1.0), exposicion elegida y costo pagado en cada dia."""
     obs, _ = env.reset()
-    capital, exposicion = [1.0], []
+    capital, exposicion, costos = [1.0], [], []
     fin = False
     while not fin:
         obs, _, terminado, truncado, info = env.step(politica(obs))
         capital.append(info["capital"])
         exposicion.append(info["exposicion"])
+        costos.append(info["costo"])
         fin = terminado or truncado
-    return {"capital": np.array(capital), "exposicion": np.array(exposicion)}
+    return {
+        "capital": np.array(capital),
+        "exposicion": np.array(exposicion),
+        "costos": np.array(costos),
+    }
 
 
 def metricas(sim: dict[str, np.ndarray]) -> dict[str, float]:
@@ -37,9 +44,13 @@ def metricas(sim: dict[str, np.ndarray]) -> dict[str, float]:
     r = np.diff(np.log(capital))
     pico = np.maximum.accumulate(capital)
     cambios = np.abs(np.diff(exposicion, prepend=0.0))
+    costos = float(sim["costos"].sum()) if "costos" in sim else 0.0
     return {
         "retorno_pct": float((capital[-1] - 1.0) * 100.0),
         "max_caida_pct": float((1.0 - capital / pico).max() * 100.0),
+        # costos pagados, en % del capital inicial y en $ sobre un capital de $100.000
+        "costos_pct": costos * 100.0,
+        "costos_monto": costos * CAPITAL_INICIAL,
         "sharpe": float(r.mean() / (r.std() + 1e-12) * np.sqrt(252)),
         "exposicion_media": float(exposicion.mean()),
         "rotacion": float(cambios.sum()),  # veces que se movio el capital completo
