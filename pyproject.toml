@@ -39,6 +39,7 @@ packages = ["src/agente_inversor"]
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["notebooks"]  # cuaderno exploratorio: se revisa ejecutandolo, no con lint
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]

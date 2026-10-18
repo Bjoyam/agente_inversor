@@ -39,7 +39,10 @@ protocolo de evaluación y los baselines.
 
 ```bash
 uv sync
-uv run pytest -q                      # 11 pruebas del entorno, los datos y las métricas
+uv run pytest -q                      # 12 pruebas del entorno, los datos y las métricas
+
+# Análisis exploratorio (deja las figuras eda_*.png en resultados/)
+uv run --with jupyter jupyter nbconvert --to notebook --execute --inplace notebooks/eda.ipynb
 
 uv run agente-inversor inspeccionar   # datos, tramos, estado, acciones
 uv run agente-inversor baselines --tramo validacion
@@ -53,6 +56,7 @@ uv run agente-inversor prueba  --config configs/ppo.yaml --recompensa diferencia
 uv run agente-inversor prueba  --config configs/ppo.yaml --recompensa diferencial \
                                --tramo prueba_extendida   # segunda prueba, 2018 a 2025
 uv run python scripts/graficar.py
+uv run python scripts/analisis_recompensas.py   # costos y posiciones por recompensa, en validación
 
 # Solo si se quiere volver a bajar la serie de Yahoo Finance (el CSV ya está en datos/)
 uv run --no-project --with yfinance python scripts/descargar_datos.py
@@ -73,6 +77,18 @@ GOOGL de Yahoo Finance hasta el 31 de diciembre de 2025, guardado en
 `datos/GOOGL_yahoo_2018-07_2025-12.csv`. En los 42 días que comparten, las dos fuentes
 difieren en un factor constante de 20,19 (la división de acciones de 2022, que Yahoo ya
 ajusta), así que los retornos son idénticos y la serie continúa sin salto.
+
+**Análisis exploratorio** (`notebooks/eda.ipynb`). Lo que se usa para diseñar se mide solo en
+entrenamiento. Los retornos diarios tienen colas pesadas (curtosis en exceso de 13,4, diez días
+más allá de 4 desviaciones cuando una normal esperaría 0,1), casi no tienen autocorrelación,
+pero su valor absoluto sí: la volatilidad se agrupa. La caída más profunda de la serie
+(−30,4 %, 2010) queda en entrenamiento; validación y prueba no pasan de −15,4 %. El volumen cae
+de unos 6 a 2 millones de acciones diarias y no anticipa el retorno siguiente (correlación
+0,02), así que no entra en el estado. Ningún indicador del estado tiene correlación con el
+retorno del día siguiente por encima del umbral de ruido (±0,05): la señal disponible en el
+precio es débil, y eso anticipa que comprar y mantener será difícil de superar.
+
+![Precio, partición y drawdown](resultados/eda_precio_drawdown.png)
 
 **Estado**, siete números, todos calculados con los últimos 20 días:
 
@@ -141,18 +157,25 @@ neto del costo, en puntos porcentuales.
 Resultados en validación, mediana de cinco semillas por configuración (las métricas se
 calculan siempre sobre el capital real, nunca sobre la recompensa):
 
-| Configuración | Retorno entrenamiento | Retorno validación (mín. a máx.) | Máx. caída | Exposición media | Operaciones |
-|---|---|---|---|---|---|
-| PPO, `diferencial` | +285,6 % | **+11,7 %** (+5,7 a +20,6) | 14,2 % | 0,80 | 56 |
-| DQN, `diferencial` | +448,5 % | +6,7 % (+0,4 a +12,4) | 14,6 % | 0,76 | 97 |
-| PPO, `log` | +177,4 % | +6,3 % (−6,3 a +14,4) | 13,3 % | 0,78 | 61 |
-| DQN, `aversion` | +122,5 % | +5,7 % (−1,1 a +9,7) | 3,3 % | 0,05 | 23 |
-| PPO, `aversion` | +12,6 % | 0,0 % (−2,6 a +3,9) | 0,5 % | 0,01 | 2 |
-| DQN, `log` | +670,2 % | −4,1 % (−9,8 a +9,9) | 12,9 % | 0,48 | 100 |
-| *Comprar y mantener* | *+267,7 %* | *+12,1 %* | *14,2 %* | *1,00* | *1* |
-| *Agente aleatorio* | | *−8,9 %* | *16,3 %* | *0,50* | *234* |
+| Configuración | Retorno entrenamiento | Retorno validación (mín. a máx.) | Máx. caída | Costos | Exposición media | Operaciones |
+|---|---|---|---|---|---|---|
+| PPO, `diferencial` | +285,6 % | **+11,7 %** (+5,7 a +20,6) | 14,2 % | 2,9 % | 0,80 | 56 |
+| DQN, `diferencial` | +448,5 % | +6,7 % (+0,4 a +12,4) | 14,6 % | 5,6 % | 0,76 | 97 |
+| PPO, `log` | +177,4 % | +6,3 % (−6,3 a +14,4) | 13,3 % | 3,2 % | 0,78 | 61 |
+| DQN, `aversion` | +122,5 % | +5,7 % (−1,1 a +9,7) | 3,3 % | 1,9 % | 0,05 | 23 |
+| PPO, `aversion` | +12,6 % | 0,0 % (−2,6 a +3,9) | 0,5 % | 0,2 % | 0,01 | 2 |
+| DQN, `log` | +670,2 % | −4,1 % (−9,8 a +9,9) | 12,9 % | 8,5 % | 0,48 | 100 |
+| *Comprar y mantener* | *+267,7 %* | *+12,1 %* | *14,2 %* | *0,1 %* | *1,00* | *1* |
+| *Agente aleatorio* | | *−8,9 %* | *16,3 %* | *14,8 %* | *0,50* | *234* |
+
+Los costos se expresan en porcentaje del capital inicial (sobre $100.000, 2,9 % son $2.900) y
+salen de `scripts/analisis_recompensas.py`, que vuelve a recorrer los 30 modelos guardados en
+validación sin reentrenarlos. En DQN con `log` los costos (8,5 %) son más que toda su pérdida
+neta (−4,1 %): antes de costos habría ganado algo, y lo destruyó operando 100 veces.
 
 ![Retorno en validación por configuración](resultados/validacion.png)
+
+![Exposición diaria en validación según la recompensa](resultados/recompensas_posiciones.png)
 
 **Comportamiento que induce cada recompensa:**
 
@@ -198,20 +221,35 @@ aleatorio (promedio de 100 semillas).
 
 ## 5. Resultados en el tramo de prueba
 
-| | Retorno | Máx. caída | Sharpe | Exposición media | Operaciones |
-|---|---|---|---|---|---|
-| Agente, semilla 0 | +26,5 % | 13,4 % | 1,08 | 0,64 | 48 |
-| Agente, semilla 1 | +23,1 % | 16,8 % | 0,87 | 0,75 | 45 |
-| Agente, semilla 2 | +62,3 % | 12,9 % | 1,80 | 0,87 | 52 |
-| Agente, semilla 3 | +37,5 % | 15,0 % | 1,08 | 0,92 | 9 |
-| Agente, semilla 4 | +57,7 % | 13,8 % | 1,57 | 1,00 | 3 |
-| **Agente, mediana** | **+37,5 %** | **13,8 %** | **1,08** | | |
-| Comprar y mantener | +50,0 % | 15,4 % | 1,36 | 1,00 | 1 |
-| 50 % fijo | +23,5 % | 7,8 % | 1,42 | 0,50 | 1 |
-| En efectivo | 0,0 % | 0,0 % | | 0,00 | 0 |
-| Agente aleatorio | +4,4 % ± 11,3 | 15,5 % | 0,20 | 0,50 | 234 |
+| | Retorno | Máx. caída | Costos | Sharpe | Exposición media | Operaciones |
+|---|---|---|---|---|---|---|
+| Agente, semilla 0 | +26,5 % | 13,4 % | 2,8 % | 1,08 | 0,64 | 48 |
+| Agente, semilla 1 | +23,1 % | 16,8 % | 2,6 % | 0,87 | 0,75 | 45 |
+| Agente, semilla 2 | +62,3 % | 12,9 % | 6,5 % | 1,80 | 0,87 | 52 |
+| Agente, semilla 3 | +37,5 % | 15,0 % | 0,8 % | 1,08 | 0,92 | 9 |
+| Agente, semilla 4 | +57,7 % | 13,8 % | 0,4 % | 1,57 | 1,00 | 3 |
+| **Agente, mediana** | **+37,5 %** | **13,8 %** | **2,6 %** | **1,08** | | |
+| Comprar y mantener | +50,0 % | 15,4 % | 0,1 % | 1,36 | 1,00 | 1 |
+| 50 % fijo | +23,5 % | 7,8 % | 0,05 % | 1,42 | 0,50 | 1 |
+| En efectivo | 0,0 % | 0,0 % | 0,0 % | | 0,00 | 0 |
+| Agente aleatorio | +4,4 % ± 11,3 | 15,5 % | 16,1 % | 0,20 | 0,50 | 234 |
 
 ![Curva de capital en el tramo de prueba](resultados/prueba.png)
+
+![Exposición diaria de cada semilla en el tramo de prueba](resultados/posiciones_prueba.png)
+
+La figura de posiciones muestra que las cinco semillas aprendieron estilos distintos con la
+misma recompensa: las semillas 0 y 1 nunca salen del todo, alternan entre 50 % y 100 %; la
+semilla 2 salta entre 0 % y 100 % (por eso paga más costos, 6,5 %); la 3 sale tres veces del
+mercado y la 4 sale una sola vez, durante un solo día.
+
+Ese único día de la semilla 4 explica toda su ventaja. Tras la caída de 5,4 % del 2 de febrero
+de 2018, el último retorno medido en unidades de volatilidad queda en un valor extremo, el
+agente pasa a 0 % y no cobra el 5 de febrero, que cae otro 5,2 %; al día siguiente vuelve al
+100 % y sí recibe las caídas del 7 y 8 de febrero. Comprar y mantener multiplicado por esa sola
+caída evitada y por dos costos de 0,1 % da 1,500 × e^0,052 × 0,999² ≈ 1,577, que es
+exactamente su +57,7 %. No es una estrategia, es una reacción a un valor extremo del estado
+que esta vez salió bien.
 
 - El agente supera con claridad al agente aleatorio en las cinco semillas.
 - No supera a comprar y mantener: mediana +37,5 % contra +50,0 %, y dos de cinco semillas
@@ -230,18 +268,23 @@ reentrenar ni cambiar nada, en los siete años y cuatro meses siguientes, que in
 caída de febrero y marzo de 2020 (−30,9 % para comprar y mantener) y el mercado bajista de
 noviembre de 2021 a noviembre de 2022 (−44,3 %). Este tramo no se usó para elegir nada.
 
-| | Retorno | Máx. caída | Sharpe | Exposición media | Operaciones |
-|---|---|---|---|---|---|
-| Agente, semilla 0 | +243,9 % | 29,4 % | 0,75 | 0,63 | 289 |
-| Agente, semilla 1 | +240,7 % | 32,5 % | 0,73 | 0,70 | 295 |
-| Agente, semilla 2 | +168,4 % | 38,3 % | 0,47 | 0,84 | 342 |
-| Agente, semilla 3 | +497,1 % | 42,9 % | 0,79 | 0,99 | 16 |
-| Agente, semilla 4 | +430,1 % | 42,8 % | 0,73 | 1,00 | 9 |
-| **Agente, mediana** | **+243,9 %** | **38,3 %** | **0,73** | | |
-| Comprar y mantener | +398,2 % | 44,3 % | 0,70 | 1,00 | 1 |
-| 50 % fijo | +144,3 % | 24,1 % | 0,78 | 0,50 | 1 |
-| En efectivo | 0,0 % | 0,0 % | | 0,00 | 0 |
-| Agente aleatorio | +10,0 % ± 33,6 | 43,5 % | 0,03 | 0,50 | 1.229 |
+| | Retorno | Máx. caída | Costos | Sharpe | Exposición media | Operaciones |
+|---|---|---|---|---|---|---|
+| Agente, semilla 0 | +243,9 % | 29,4 % | 24,4 % | 0,75 | 0,63 | 289 |
+| Agente, semilla 1 | +240,7 % | 32,5 % | 24,9 % | 0,73 | 0,70 | 295 |
+| Agente, semilla 2 | +168,4 % | 38,3 % | 38,9 % | 0,47 | 0,84 | 342 |
+| Agente, semilla 3 | +497,1 % | 42,9 % | 3,4 % | 0,79 | 0,99 | 16 |
+| Agente, semilla 4 | +430,1 % | 42,8 % | 1,5 % | 0,73 | 1,00 | 9 |
+| **Agente, mediana** | **+243,9 %** | **38,3 %** | **24,4 %** | **0,73** | | |
+| Comprar y mantener | +398,2 % | 44,3 % | 0,1 % | 0,70 | 1,00 | 1 |
+| 50 % fijo | +144,3 % | 24,1 % | 0,05 % | 0,78 | 0,50 | 1 |
+| En efectivo | 0,0 % | 0,0 % | 0,0 % | | 0,00 | 0 |
+| Agente aleatorio | +10,0 % ± 33,6 | 43,5 % | 76,0 % | 0,03 | 0,50 | 1.229 |
+
+Los costos se acumulan en porcentaje del capital **inicial**, y como el capital crece, cada
+operación tardía cuesta más pesos: las semillas activas pagan en siete años entre 24 % y 39 %
+del capital inicial, una parte importante de lo que les falta para alcanzar a comprar y
+mantener.
 
 ![Curva de capital en la segunda prueba, escala logarítmica](resultados/prueba_extendida.png)
 
@@ -314,13 +357,15 @@ lugar de un solo corte; y agregar indicadores que no sean solo del precio.
 
 ## 7. Reflexión
 
-*(Pendiente: reflexión del equipo sobre el proceso.)*
+La reflexión es individual: cada integrante la presenta en su propio informe.
 
 ## 8. Estructura
 
 ```
 configs/                 # un YAML por algoritmo: entorno, hiperparámetros, búsqueda
 datos/                   # GOOGL de Yahoo Finance, 2018 a 2025, para la segunda prueba
+notebooks/eda.ipynb      # análisis exploratorio de los datos y auditoría de lookahead
+scripts/analisis_recompensas.py  # costos y posiciones de las 30 corridas en validación
 scripts/comparar.sh      # la rejilla completa de corridas
 scripts/descargar_datos.py  # baja el CSV de datos/ (yfinance)
 scripts/graficar.py      # figuras del informe
@@ -337,6 +382,18 @@ resultados/              # tablas, figuras y una ficha JSON por corrida
 saves/                   # modelos entrenados, uno por configuración y semilla
 tests/                   # pruebas del entorno y de las métricas
 ```
+
+Correspondencia con la estructura sugerida en el enunciado:
+
+| Sugerido | En este repositorio |
+|---|---|
+| `src/environment.py` | `src/agente_inversor/envs.py` |
+| `src/agent.py` | `src/agente_inversor/registry.py` (DQN y PPO de Stable-Baselines3) y `configs/*.yaml` |
+| `src/train.py` | `src/agente_inversor/experiments.py` (`entrenar`, `tune`) |
+| `src/evaluate.py` | `src/agente_inversor/experiments.py` (`prueba`) y `evaluacion.py` (métricas) |
+| `src/baselines.py` | `src/agente_inversor/evaluacion.py` (`baselines`) |
+| procesamiento de datos | `src/agente_inversor/datos.py` |
+| `notebooks/eda.ipynb` | `notebooks/eda.ipynb` |
 
 ## 9. Uso de inteligencia artificial
 

@@ -20,7 +20,9 @@ import yaml
 from agente_inversor import config, datos, envs, evaluacion, experiments
 from agente_inversor.envs import RECOMPENSAS
 
-COLUMNAS = ["retorno_pct", "max_caida_pct", "sharpe", "exposicion_media", "rotacion"]
+COLUMNAS = [
+    "retorno_pct", "max_caida_pct", "costos_pct", "sharpe", "exposicion_media", "rotacion",
+]
 
 
 def _cfg(args: argparse.Namespace) -> config.Config:
@@ -85,6 +87,7 @@ def cmd_resumen(_args: argparse.Namespace) -> None:
     df = pd.DataFrame([json.loads(a.read_text()) for a in archivos])
     df.to_csv(experiments.RESULTADOS / "validacion.csv", index=False)
     cols = [f"entrenamiento_{COLUMNAS[0]}"] + [f"validacion_{c}" for c in COLUMNAS]
+    cols = [c for c in cols if c in df]  # las corridas antiguas no traen costos
     resumen = df.groupby("etiqueta")[cols].median()
     resumen.insert(0, "semillas", df.groupby("etiqueta").size())
     resumen = resumen.sort_values("validacion_retorno_pct", ascending=False)
