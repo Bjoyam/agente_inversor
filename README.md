@@ -175,9 +175,11 @@ neto del costo, en puntos porcentuales.
 | `diferencial` | *r* menos el retorno del activo | Premiar solo lo que se gana **respecto a** comprar y mantener. Estar 100 % invertido vale 0 |
 | `aversion` | *r* si es ganancia, 2*r* si es pérdida | Un agente más prudente, con menos caídas |
 
-**Iteración del diseño.** Las tres recompensas se entrenaron con el mismo protocolo (dos
-algoritmos, cinco semillas, 100.000 pasos) para compararlas en igualdad de condiciones, y
-cada una responde a un problema observado en la anterior:
+**Iteración del diseño.** Diseñamos las tres recompensas antes de entrenar, cada una pensada
+para corregir un problema esperado de la anterior, y las entrenamos juntas con el mismo
+protocolo (dos algoritmos, cinco semillas, 100.000 pasos) para comparar en igualdad de
+condiciones el comportamiento que inducen. Los resultados confirmaron los problemas que
+motivaron cada cambio:
 
 1. **Versión 1, `log`.** Primera recompensa: el crecimiento del capital, la elección
    natural. *Observación:* DQN logra el mejor retorno de entrenamiento de todo el
@@ -354,8 +356,8 @@ noviembre de 2021 a noviembre de 2022 (−44,3 %). Este tramo no se usó para el
 
 Los costos se acumulan en porcentaje del capital **inicial**, y como el capital crece, cada
 operación tardía cuesta más pesos: las semillas activas pagan en siete años entre 24 % y 39 %
-del capital inicial, una parte importante de lo que les falta para alcanzar a comprar y
-mantener.
+del capital inicial. Eso explica una parte de lo que les falta para alcanzar a comprar y
+mantener, que es una diferencia de entre 154 y 230 puntos.
 
 ![Curva de capital en la segunda prueba, escala logarítmica](resultados/prueba_extendida.png)
 
@@ -464,14 +466,56 @@ y 4 sí convergieron a ella. Sospecho que influye entrenar con ventanas de un a�
 azar, en algunas de las cuales reducir exposición sí paga, y que la exploración por entropía
 no alcanza para salir de ese comportamiento, pero no lo verifiqué.
 
-**¿Cuál fue la principal diferencia entre lo aprendido en el curso y su aplicación a este
-problema?** En los entornos del curso, como CartPole o Pong, el entorno es estacionario, la
+**¿Cuál fue la principal diferencia entre lo aprendido en Reinforcement Learning y su
+aplicación a este problema?** En los entornos del curso, como CartPole o Pong, el entorno es estacionario, la
 recompensa está bien definida y el desempeño en entrenamiento es buena señal del desempeño
 real. Aquí ninguna de las tres cosas se cumple: el mercado cambia de régimen, la recompensa
 hay que diseñarla y el agente que mejor rinde en entrenamiento (DQN con `log`, +670 %) es el
 peor fuera de él. Desde mi trabajo en arquitectura de datos, la regla de no mirar el futuro me
 resultó familiar como un problema de fuga de datos y de linaje: lo importante no fue el
 algoritmo, sino garantizar con pruebas qué información estaba disponible en cada momento.
+
+### Gabriel Alonso Lizano Alvarado
+
+**¿Cuál fue el resultado que más me sorprendió?** Lo que pasó en la segunda prueba, de 2018 a
+2025. Esperaba que, con siete años y dos caídas fuertes, el agente o se desplomara o mostrara
+alguna habilidad real. Ocurrieron las dos cosas a la vez, según la semilla. Las semillas que
+más operan perdieron bastante menos en el mercado bajista de 2022 (entre 29 % y 38 %, frente a
+44 % de comprar y mantener), pero al final su Sharpe apenas supera al de comprar y mantener y
+queda por debajo del de tener siempre el 50 % invertido, que no necesita ningún agente. Que una
+regla tan simple empate o gane a un agente entrenado fue la lección más clara del proyecto.
+
+**¿Qué decisión metodológica tuvo mayor impacto en el agente?** Fijar el protocolo antes de
+mirar el tramo de prueba, incluida la regla para aceptar los hiperparámetros de Optuna. Optuna
+reportó una mediana de +15,3 % en validación; al reentrenar con cinco semillas completas bajó a
++11,65 %, lo mismo que sin ajustar. Si no hubiéramos decidido de antemano que solo se aceptaba
+una mejora confirmada con las cinco semillas, habríamos adoptado esos hiperparámetros
+convencidos de haber mejorado el agente, cuando lo único que habíamos hecho era elegir el
+máximo entre quince pruebas ruidosas.
+
+**¿Qué cambiaría si tuviera que repetir el experimento?** Entrenaría con datos que incluyan
+caídas prolongadas, ya sea con varios activos o con un periodo de entrenamiento que llegue más
+allá de 2018. El agente aprendió de un tramo casi todo alcista, de 2009 a 2015, y la segunda
+prueba mostró que ninguna semilla aprendió a salir y volver a entrar a tiempo: las que reducen
+exposición en las caídas no recuperan en las subidas. Con lo que vio en entrenamiento no tenía
+cómo aprenderlo.
+
+**¿Qué comportamiento del agente no logré explicar completamente?** Por qué la semilla 2 reduce
+su exposición justo en el momento equivocado de 2020 y termina perdiendo más que comprar y
+mantener en esa caída (−37,1 % frente a −30,9 %), mientras otras semillas con la misma
+configuración pierden menos. Sospecho que reacciona a la volatilidad, que se dispara después de
+las primeras caídas, y que por eso sale tarde y vuelve a entrar tarde, pero no analicé sus
+posiciones día a día para comprobarlo.
+
+**¿Cuál fue la principal diferencia entre lo aprendido en Reinforcement Learning y su
+aplicación a este problema?** En el Taller 2, con Pong, cuando algo fallaba se notaba de
+inmediato: el agente perdía 21 a 0 y había que buscar el error. Allí perdimos horas de
+entrenamiento por un parámetro de Adam, pero el síntoma era evidente. Aquí los errores son
+silenciosos: el agente que mejor rinde en entrenamiento puede ser el peor fuera de él, y un
+buen número en prueba puede salir de un solo día afortunado. Como ingeniero de software, lo que
+más me sirvió fue tratar el entorno como código de producción, con pruebas automáticas que
+verifican que no se usa información del futuro y que la contabilidad cuadra. En este problema,
+la confianza en el resultado depende más de esas pruebas que del algoritmo.
 
 ## 8. Estructura
 
