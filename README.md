@@ -64,6 +64,9 @@ uv run --no-project --with yfinance python scripts/descargar_datos.py
 uv run mlflow ui                      # http://127.0.0.1:5000, experimento agente_inversor
 ```
 
+En Windows, los comandos `uv` funcionan igual en CMD o PowerShell; `scripts/comparar.sh` es
+un script de bash y se ejecuta desde Git Bash (o WSL).
+
 Las semillas están fijas en los YAML (0 a 4) y los modelos entrenados están en `saves/`,
 así que `prueba` reproduce la tabla final sin reentrenar. Al reentrenar en otra máquina los
 números pueden variar levemente por diferencias de versión de PyTorch.
@@ -111,6 +114,24 @@ próxima acción depende de dónde está el capital hoy.
 acción es la exposición objetivo, no una orden de compra o venta, de modo que repetir la
 acción no opera ni cuesta.
 
+| Acción | Exposición | Significado económico |
+|---|---|---|
+| 0 | 0 % | Todo el capital en efectivo, sin rendimiento: no se gana ni se pierde con el activo |
+| 1 | 50 % | Posición prudente: la mitad del capital sigue al activo, la otra mitad queda en efectivo |
+| 2 | 100 % | Totalmente expuesto: el capital sube y baja igual que el activo |
+
+*Por qué tres niveles.* Es la granularidad mínima que expresa las tres actitudes que importan
+(fuera, prudente, totalmente expuesto), funciona directamente con DQN y mantiene la política
+fácil de interpretar en una gráfica de posiciones. Con más niveles (por ejemplo 0, 25, 50, 75
+y 100 %) habría más transiciones posibles, y cada ajuste pequeño pagaría costo sin que el
+análisis exploratorio muestre una señal tan fina que lo justifique.
+
+*Qué no puede hacer el agente.* No puede apostar a la baja (posiciones cortas), apalancarse
+por encima del 100 %, tomar exposiciones intermedias como 25 % o 75 %, usar órdenes
+condicionales (*stop-loss*, *take-profit*), operar dentro del día ni repartir el capital entre
+varios activos. En particular, en una caída lo mejor que puede hacer es quedarse en efectivo,
+no ganar con ella.
+
 **Dinámica.** El día *t* el agente ve hasta el cierre de *t*, decide, y cobra el retorno
 de *t* a *t*+1. El final de los datos se marca como truncamiento y no como estado terminal,
 porque invertir no "termina" ahí.
@@ -154,6 +175,27 @@ neto del costo, en puntos porcentuales.
 | `diferencial` | *r* menos el retorno del activo | Premiar solo lo que se gana **respecto a** comprar y mantener. Estar 100 % invertido vale 0 |
 | `aversion` | *r* si es ganancia, 2*r* si es pérdida | Un agente más prudente, con menos caídas |
 
+**Iteración del diseño.** Las tres recompensas se entrenaron con el mismo protocolo (dos
+algoritmos, cinco semillas, 100.000 pasos) para compararlas en igualdad de condiciones, y
+cada una responde a un problema observado en la anterior:
+
+1. **Versión 1, `log`.** Primera recompensa: el crecimiento del capital, la elección
+   natural. *Observación:* DQN logra el mejor retorno de entrenamiento de todo el
+   experimento (+670 %) y el peor en validación (−4,1 %), con 100 operaciones en 350 días;
+   PPO queda mejor, pero con mucha dispersión entre semillas (−6,3 % a +14,4 %).
+   *Problema:* la recompensa premia igual estar invertido en un día alcista por suerte que
+   por decisión, así que el agente persigue retornos de corto plazo, memoriza la serie de
+   entrenamiento y opera en exceso (sus costos, 8,5 %, superan su pérdida neta).
+2. **Versión 2, `aversion`.** *Modificación:* para pedir prudencia, las pérdidas pesan el
+   doble. *Observación:* el agente deja de invertir (exposición 0,01 con PPO, 2 operaciones).
+   *Problema:* *reward hacking*; cumple la recompensa sin invertir con prudencia, que era lo
+   buscado.
+3. **Versión 3, `diferencial`.** *Modificación:* en lugar de castigar pérdidas, se mide solo
+   lo que se gana respecto al activo, de modo que estar 100 % invertido vale 0 y el agente
+   solo se aparta del mercado cuando cree tener un motivo. *Observación:* mejor mediana en
+   validación y menor dispersión con PPO. *Problema que queda:* la política de no hacer nada
+   vale 0, un óptimo local cómodo al que varias semillas convergen (sección 6).
+
 Resultados en validación, mediana de cinco semillas por configuración (las métricas se
 calculan siempre sobre el capital real, nunca sobre la recompensa):
 
@@ -196,7 +238,36 @@ neta (−4,1 %): antes de costos habría ganado algo, y lo destruyó operando 10
 
 Ninguna configuración supera a comprar y mantener en la mediana de validación.
 
-## 4. Protocolo de evaluación
+## 4. Algoritmo y protocolo de evaluación
+
+### Algoritmo e hiperparámetros
+
+Usamos **DQN**, el algoritmo recomendado porque el espacio de acciones es discreto, y **PPO**,
+que incluimos como alternativa porque su política estocástica con bono de entropía y su
+actualización recortada suelen ser más estables con recompensas tan ruidosas como los
+retornos diarios. Ambos vienen de Stable-Baselines3 con `MlpPolicy`, una red pequeña sobre el
+vector de estado de siete números: el objetivo no era la arquitectura más sofisticada, sino
+que el problema, el entorno y el algoritmo encajaran.
+
+| Parámetro | DQN (`configs/dqn.yaml`) | PPO (`configs/ppo.yaml`) |
+|---|---|---|
+| Arquitectura | MLP 7 → 64 → 64 → 3 valores Q, ReLU | Dos MLP separadas 7 → 64 → 64, tanh: una para la política (3 salidas) y otra para el valor (1) |
+| Learning rate | 1,0 × 10⁻⁴ | 3,0 × 10⁻⁴ |
+| Batch size | 64 | 64, con `n_steps` = 1.024 y 10 épocas por actualización |
+| Factor de descuento γ | 0,99 | 0,99 |
+| Pasos de entrenamiento | 100.000 (unos 397 episodios de 252 días) | 100.000 (unos 397 episodios de 252 días) |
+| Replay buffer | 50.000 transiciones; aprende desde el paso 1.000, cada 4 pasos | No aplica (*on-policy*) |
+| Red objetivo | Se actualiza cada 1.000 pasos | No aplica |
+| Exploración | ε-greedy: ε baja de 1,0 a 0,05 durante el 30 % inicial y se queda en 0,05 | Política estocástica; coeficiente de entropía 0,01 |
+| Criterio de parada | Número fijo de pasos | Número fijo de pasos |
+| Semillas | 0, 1, 2, 3, 4 | 0, 1, 2, 3, 4 |
+
+Los parámetros no listados son los valores por defecto de Stable-Baselines3. El criterio de
+parada es deliberadamente un número fijo de pasos: detener el entrenamiento cuando mejora la
+validación sería otra forma de seleccionar con ese tramo. La semilla fija la inicialización
+de la red, la exploración y el muestreo de las ventanas de entrenamiento.
+
+### Protocolo
 
 Definido antes de mirar el tramo de prueba:
 
