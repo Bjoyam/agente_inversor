@@ -175,9 +175,11 @@ neto del costo, en puntos porcentuales.
 | `diferencial` | *r* menos el retorno del activo | Premiar solo lo que se gana **respecto a** comprar y mantener. Estar 100 % invertido vale 0 |
 | `aversion` | *r* si es ganancia, 2*r* si es pérdida | Un agente más prudente, con menos caídas |
 
-**Iteración del diseño.** Las tres recompensas se entrenaron con el mismo protocolo (dos
-algoritmos, cinco semillas, 100.000 pasos) para compararlas en igualdad de condiciones, y
-cada una responde a un problema observado en la anterior:
+**Iteración del diseño.** Diseñamos las tres recompensas antes de entrenar, cada una pensada
+para corregir un problema esperado de la anterior, y las entrenamos juntas con el mismo
+protocolo (dos algoritmos, cinco semillas, 100.000 pasos) para comparar en igualdad de
+condiciones el comportamiento que inducen. Los resultados confirmaron los problemas que
+motivaron cada cambio:
 
 1. **Versión 1, `log`.** Primera recompensa: el crecimiento del capital, la elección
    natural. *Observación:* DQN logra el mejor retorno de entrenamiento de todo el
@@ -354,8 +356,8 @@ noviembre de 2021 a noviembre de 2022 (−44,3 %). Este tramo no se usó para el
 
 Los costos se acumulan en porcentaje del capital **inicial**, y como el capital crece, cada
 operación tardía cuesta más pesos: las semillas activas pagan en siete años entre 24 % y 39 %
-del capital inicial, una parte importante de lo que les falta para alcanzar a comprar y
-mantener.
+del capital inicial. Eso explica una parte de lo que les falta para alcanzar a comprar y
+mantener, que es una diferencia de entre 154 y 230 puntos.
 
 ![Curva de capital en la segunda prueba, escala logarítmica](resultados/prueba_extendida.png)
 
