@@ -464,8 +464,8 @@ y 4 sí convergieron a ella. Sospecho que influye entrenar con ventanas de un a�
 azar, en algunas de las cuales reducir exposición sí paga, y que la exploración por entropía
 no alcanza para salir de ese comportamiento, pero no lo verifiqué.
 
-**¿Cuál fue la principal diferencia entre lo aprendido en el curso y su aplicación a este
-problema?** En los entornos del curso, como CartPole o Pong, el entorno es estacionario, la
+**¿Cuál fue la principal diferencia entre lo aprendido en Reinforcement Learning y su
+aplicación a este problema?** En los entornos del curso, como CartPole o Pong, el entorno es estacionario, la
 recompensa está bien definida y el desempeño en entrenamiento es buena señal del desempeño
 real. Aquí ninguna de las tres cosas se cumple: el mercado cambia de régimen, la recompensa
 hay que diseñarla y el agente que mejor rinde en entrenamiento (DQN con `log`, +670 %) es el
