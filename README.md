@@ -474,6 +474,12 @@ cual es compatible con haber evitado uno o dos días malos por azar.
   es de 0,1 puntos o menos en la prueba y de 1,3 a 1,6 puntos en los siete años de la
   segunda prueba (semillas 0 y 1 y el baseline de 50 % fijo). Las semillas que solo usan
   0 % y 100 % no cambian. Ninguna conclusión depende de este detalle.
+- **Sensibilidad al costo.** scripts/sensibilidad_costos.py recalcula el capital de las 
+  cinco semillas con costos de 0 % a 0,5 %, sin reentrenar, porque el estado no incluye el 
+  costo y las posiciones no cambian. Con costo cero la mediana del agente sigue por debajo de 
+  comprar y mantener (+38,5 % frente a +50,2 % en la prueba; +298,2 % frente a +398,7 % en 
+  la segunda prueba), así que la distancia la explican las decisiones del agente y no los costos. 
+  Con 0,5 % la semilla 2 pasa a perder 31,9 % en la segunda prueba.
 - **Indicadores solo de precio.** Si el precio diario ya incorpora la información pública,
   hay poca señal que extraer de él.
 - **Cinco semillas** alcanzan para ver que la dispersión es grande, no para estimar bien
@@ -639,6 +645,49 @@ describen como la optimización de un objetivo mal especificado, recuerda al est
 aprende a obtener la nota sin comprender el contenido: `aversion` y la versión 4 cumplen su
 recompensa con un aprendizaje superficial. Diseñar la recompensa resultó ser
 tan delicado como diseñar una evaluación.
+
+### John Jairo Serrano Cifuentes
+
+**¿Cuál fue el resultado que más me sorprendió?**
+Que el agente siguiera perdiendo frente a comprar y mantener aun sin pagar costos. Esperaba que 
+los costos explicaran buena parte de la distancia, porque las semillas activas llegan a pagar 
+entre 24 % y 39 % del capital inicial en la segunda prueba. Al recalcular el capital con costo 
+cero, la mediana del agente sube apenas de +37,5 % a +38,5 % en la prueba, frente a +50,2 % de 
+comprar y mantener. El origen del problema estaba en los días en que el agente decidía no estar 
+invertido, más que en lo que pagaba por operar.
+
+**¿Qué decisión metodológica tuvo mayor impacto en el agente?**
+Entrenar con ventanas aleatorias de un año bursátil en lugar de recorrer siempre la misma serie. 
+Cuando cada episodio recorría el tramo de entrenamiento completo, siempre en el mismo orden, el 
+agente se lo aprendía de memoria: +292 % en entrenamiento y −22 % en validación, en las pruebas 
+con datos sintéticos. Al cambiar a episodios de 252 días que empiezan en un día al azar, el agente 
+dejó de aprenderse un recorrido y tuvo que responder a situaciones distintas. Sin esa decisión, 
+ninguna de las comparaciones de recompensas habría sido interpretable.
+
+**¿Qué cambiaría si tuviera que repetir el experimento?**
+Trataría el costo como una variable del experimento desde el principio y no como una constante. 
+El análisis de sensibilidad muestra que con 0,5 % por operación la semilla 2 pasa de ganar 168 % 
+a perder 32 % en la segunda prueba, mientras que las semillas que casi no operan no se inmutan. 
+Entrenar con varios niveles de costo, o con un costo que incluya diferencial de compra y venta y 
+deslizamiento, habría mostrado desde el inicio qué políticas son robustas a la fricción real del 
+mercado y cuáles dependen de un supuesto optimista.
+
+**¿Qué comportamiento del agente no logré explicar completamente?**
+Por qué, con la misma recompensa de aversión a pérdidas, DQN y PPO escapan de forma distinta. 
+PPO se queda prácticamente en efectivo (exposición 0,01 y dos operaciones), mientras que DQN mantiene 
+una exposición de 0,05 con 23 operaciones en el mismo tramo de validación. Sospecho que los valores Q 
+de las tres acciones quedan muy cercanos entre sí, de modo que pequeños cambios en el estado alteran 
+la acción elegida, mientras que la política de PPO concentra casi toda la probabilidad en el efectivo; 
+no lo verifiqué revisando los valores Q día a día.
+
+**¿Cuál fue la principal diferencia entre lo aprendido en Reinforcement Learning y su aplicación a 
+este problema?**
+Pong, el entorno del Taller 2, entregaba la recompensa ya hecha: cada punto ganado o perdido, y lo que 
+el agente optimizaba era lo mismo que se evaluaba. Aquí la recompensa hubo que diseñarla y la evaluación 
+se hizo con otra medida, el capital real. Esa separación obliga a preguntarse en cada versión si el 
+agente aprende lo que se quería o solo lo que se le pagó. Por ello hay que diseñar qué significa 
+“buen desempeño” y luego verificar que el sistema realmente cumpla lo que se necesita, no solo lo que 
+se midió.
 
 ## 8. Estructura
 
